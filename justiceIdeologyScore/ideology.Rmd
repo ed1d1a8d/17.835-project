@@ -1,0 +1,142 @@
+---
+title: "Project "
+
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE)
+library(data.table)
+library(glmnet)
+library(ggplot2) 
+library(ggthemes)
+
+
+```
+
+```{r}
+ideology <- fread("justices.csv")
+ideology$s <- seq(1, nrow(ideology), 1)
+dem_years_table <- fread("democracy.csv")
+
+
+
+#compute which president(s) were in power during the terms each justice served.  
+for (i in 1 : nrow(ideology)) { 
+  ideology[i]$president <- 0;
+  for(j in 1: nrow(dem_years_table)) { 
+    if(ideology[i]$term >= dem_years_table[j]$S && ideology[i]$term <= dem_years_table[j]$E){
+      ideology[i]$president<- 1; 
+    }
+  }
+}
+
+
+
+
+# mean of all justice scores
+
+mean_j <- ideology[, .(fist_term = min(term), score = mean(post_mn)), by = justiceName]
+
+# identify very liberal and conserative justices
+k <- ideology[, .(min_score = min(post_mn), max_score = max(post_mn)), by = justiceName]
+k$score <- k$min_score * k$max_score 
+k <- k[score > 0]
+conserative <- k[min_score >= 1]
+liberal <- k[max_score <= -1]
+for (i in 1 : nrow(liberal)) { 
+  cat("'")
+ cat(liberal$justiceName[i])
+ cat( "\' ,")
+}
+for (i in 1 : nrow(conserative)) { 
+  cat("'")
+ cat(conserative$justiceName[i])
+ cat( "\' ,")
+}
+m <- ideology[post_mn >= 3 | post_mn <= -3]
+ideology <- merge(ideology,mean_j, by= c("justiceName"))
+ideology$chosen<- ifelse(ideology$fist_term %in% dem_years, "D", "R")
+average <- ideology[, .(avg = mean(post_mn)), by = term]
+average <-  average[ order(term), ]
+
+average$president <- ifelse(average$term %in% dem_years, average$president <- "D", average$president <- "R")
+# manually updating the score for these justices that were wrong
+ideology$chosen <- ifelse(ideology$justiceName %in% c("71","PButler","HFStone","CEHughes2","OJRoberts","BNCardozo"), "R",ideology$chosen)
+rep <- ideology[chosen == "R"]
+rep_c <- rep[, .(avg = mean(post_mn)), by= term ] 
+
+dem <- ideology[chosen == "D"]
+dem_c <- dem[, .(avg = mean(post_mn)), by= term ] 
+# Generate some data
+#x<-1:10; y1=x*x; y2=2*y1
+#plot(x, y1, type="b", pch=19, col="red", xlab="x", ylab="y")
+# Add a line
+#lines(x, y2, pch=19, col="blue", type="b", lty=2)
+# Add a legend
+#legend(1, 95, legend=c("Democrat Nominated Justices Avearge", "Republican Nominated Justices Average", "All Justices Average"),
+#       col=c("blue", "red", "magenta"), lty=1,  cex=1)
+
+```
+
+```{r}
+
+
+color_d <- "steelblue3"
+color_r <- "indianred"
+a <- 0.01
+mean_j <- l[fist_term >= 1940]
+mean_j$term <- l$fist_term
+mean_j$avg <- l$score
+
+dem_years_c <- c(1937, 1961, 1977, 1993, 2009 )
+rep_years_c <- c(1953, 1969, 1981, 2001, 2016 )
+
+
+print(rep_c[term >= 1996 & term <= 2000]$avg)
+print(dem_c[term >= 1988 & term <= 1992]$avg)
+
+ p <- ggplot(average, aes(x = term, y = avg))  + 
+geom_rect(aes(xmin =dem_years_c[1], xmax = rep_years_c[1], ymin = -Inf, ymax = Inf),
+ fill = color_d, alpha = a, size = 1) + 
+  geom_rect(aes(xmin =dem_years_c[2], xmax = rep_years_c[2], ymin = -Inf, ymax = Inf),
+ fill = color_d, alpha = a)+
+  geom_rect(aes(xmin =dem_years_c[3], xmax = rep_years_c[3], ymin = -Inf, ymax = Inf),
+ fill = color_d, alpha = a)+
+  geom_rect(aes(xmin =dem_years_c[4], xmax = rep_years_c[4], ymin = -Inf, ymax = Inf),
+ fill = color_d, alpha = a)+
+  geom_rect(aes(xmin =dem_years_c[5], xmax = rep_years_c[5], ymin = -Inf, ymax = Inf),
+ fill = color_d, alpha = a)+
+ geom_rect(aes(xmin = rep_years_c[1], xmax = dem_years_c[2], ymin = -Inf, ymax = Inf),
+ fill = color_r, alpha = a)+
+  geom_rect(aes(xmin = rep_years_c[2], xmax = dem_years_c[3], ymin = -Inf, ymax = Inf),
+ fill = color_r, alpha = a)+
+   geom_rect(aes(xmin = rep_years_c[3], xmax = dem_years_c[4], ymin = -Inf, ymax = Inf),
+ fill = color_r, alpha = a)+
+   geom_rect(aes(xmin = rep_years_c[4], xmax = dem_years_c[5], ymin = -Inf, ymax = Inf),
+ fill = color_r, alpha = a)+
+    geom_rect(aes(xmin = rep_years_c[5], xmax = 2018, ymin = -Inf, ymax = Inf),
+ fill = color_r, alpha = a)+
+geom_line(  size = 1, color ="magenta" ) +
+   geom_line(data = rep_c, col = "red", size = 1) +
+  geom_line(data = dem_c, col = "blue", size = 1) +
+  scale_x_continuous(breaks=seq(1940,2017,8)) + 
+   ylim(-3.5  ,3)+ 
+ theme(text = element_text(size=15), plot.title = element_text(hjust = 0.5)) +
+   theme(
+        rect = element_rect(fill = "transparent") 
+      ) + 
+  
+  labs(x = "Year", y = "Average Ideology Score",  title = "Ideology Score Of Justices Over Time", col = NULL)
+
+show(p)
+
+```
+
+```{r}
+
+#do a t test to see if the groups are statstically different
+t.test(rep_c$avg, dem_c$avg)
+t.test(dem$post_mn, rep$post_mn)
+
+
+```
