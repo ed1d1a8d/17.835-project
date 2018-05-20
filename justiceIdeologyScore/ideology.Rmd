@@ -21,14 +21,21 @@ dem_years_table <- fread("democracy.csv")
 
 
 #compute which president(s) were in power during the terms each justice served.  
-for (i in 1 : nrow(ideology)) { 
-  ideology[i]$president <- 0;
-  for(j in 1: nrow(dem_years_table)) { 
-    if(ideology[i]$term >= dem_years_table[j]$S && ideology[i]$term <= dem_years_table[j]$E){
-      ideology[i]$president<- 1; 
+compute_year <- function(year) {
+  l <- seq(1, length(year), 1)
+  for (i in 1 : length(year)) {
+  l[i] <- "R";
+#ideology[i]$president <- 0;
+  for(j in 1: nrow(dem_years_table)) {
+    if(year[i] >= dem_years_table[j]$S && year[i] <= dem_years_table[j]$E){
+      l[i]<- "D";
+      break;
     }
   }
+  }
+  return (l);
 }
+
 
 
 
@@ -55,23 +62,20 @@ for (i in 1 : nrow(conserative)) {
 }
 m <- ideology[post_mn >= 3 | post_mn <= -3]
 ideology <- merge(ideology,mean_j, by= c("justiceName"))
+ideology$s <- compute_year(ideology$fist_term)
 ideology$chosen<- ifelse(ideology$fist_term %in% dem_years, "D", "R")
 average <- ideology[, .(avg = mean(post_mn)), by = term]
 average <-  average[ order(term), ]
 
-average$president <- ifelse(average$term %in% dem_years, average$president <- "D", average$president <- "R")
+
 # manually updating the score for these justices that were wrong
-ideology$chosen <- ifelse(ideology$justiceName %in% c("71","PButler","HFStone","CEHughes2","OJRoberts","BNCardozo"), "R",ideology$chosen)
+ideology$chosen <- ifelse(ideology$justiceName %in% c("GSutherland","PButler","HFStone","CEHughes2","OJRoberts","BNCardozo"), "R",ideology$chosen)
 rep <- ideology[chosen == "R"]
 rep_c <- rep[, .(avg = mean(post_mn)), by= term ] 
 
 dem <- ideology[chosen == "D"]
 dem_c <- dem[, .(avg = mean(post_mn)), by= term ] 
 # Generate some data
-#x<-1:10; y1=x*x; y2=2*y1
-#plot(x, y1, type="b", pch=19, col="red", xlab="x", ylab="y")
-# Add a line
-#lines(x, y2, pch=19, col="blue", type="b", lty=2)
 # Add a legend
 #legend(1, 95, legend=c("Democrat Nominated Justices Avearge", "Republican Nominated Justices Average", "All Justices Average"),
 #       col=c("blue", "red", "magenta"), lty=1,  cex=1)
@@ -135,7 +139,9 @@ show(p)
 ```{r}
 
 #do a t test to see if the groups are statstically different
-t.test(rep_c$avg, dem_c$avg)
+#compare the average of dem_c and repulicans over time
+t.test( dem_c$avg, rep_c$avg)
+#compare the raw score of dem_c and repulicans overtime
 t.test(dem$post_mn, rep$post_mn)
 
 
