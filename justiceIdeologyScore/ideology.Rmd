@@ -75,8 +75,9 @@ rep_c <- rep[, .(avg = mean(post_mn)), by= term ]
 
 dem <- ideology[chosen == "D"]
 dem_c <- dem[, .(avg = mean(post_mn)), by= term ] 
-# Generate some data
-# Add a legend
+
+#Legend for graph that is displayed below 
+
 #legend(1, 95, legend=c("Democrat Nominated Justices Avearge", "Republican Nominated Justices Average", "All Justices Average"),
 #       col=c("blue", "red", "magenta"), lty=1,  cex=1)
 
@@ -96,8 +97,11 @@ dem_years_c <- c(1937, 1961, 1977, 1993, 2009 )
 rep_years_c <- c(1953, 1969, 1981, 2001, 2016 )
 
 
-print(rep_c[term >= 1996 & term <= 2000]$avg)
-print(dem_c[term >= 1988 & term <= 1992]$avg)
+
+# main plot showing the ideology scores of justices over time: 
+# Legend: Blue: Democrat nominated justices average 
+# Red: Repulican nominated justice average 
+# Magenta: All justices average
 
  p <- ggplot(average, aes(x = term, y = avg))  + 
 geom_rect(aes(xmin =dem_years_c[1], xmax = rep_years_c[1], ymin = -Inf, ymax = Inf),
